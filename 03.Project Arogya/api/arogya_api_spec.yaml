@@ -1,0 +1,226 @@
+openapi: 3.0.3
+info:
+  title: Project Arogya API
+  description: |
+    AB Infra Healthcare — Patient Journey Intelligence & Operations API.
+    Rs.200Cr+ Revenue | 8 Branches | 800+ Beds | 300+ Clinical Staff | 400+ Sales
+  version: 1.0.0
+  contact:
+    name: Guptha Ashish Goud
+    email: admin@arogyahospitals.com
+
+servers:
+  - url: https://api.arogyahospitals.com/v1
+    description: Production
+  - url: https://staging-api.arogyahospitals.com/v1
+    description: Staging
+
+security:
+  - BearerAuth: []
+
+paths:
+  /branches/overview:
+    get:
+      summary: Branch performance overview
+      description: Returns all 8 branches with occupancy, admissions, revenue — used in Act 1
+      tags: [GM Command Center]
+      responses:
+        '200':
+          description: Branch performance list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BranchOverview'
+                  summary:
+                    type: object
+                    properties:
+                      total_admissions: { type: integer }
+                      avg_occupancy_pct: { type: number }
+                      total_revenue: { type: number, format: decimal }
+
+  /surgeries/live:
+    get:
+      summary: Live surgery status
+      description: Returns current day surgeries with hourly update counts — used in Act 2
+      tags: [OR & Surgery Tracker]
+      parameters:
+        - name: branch_id
+          in: query
+          schema: { type: integer }
+        - name: ot_number
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Live surgery list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Surgery'
+                  summary:
+                    type: object
+                    properties:
+                      total_scheduled: { type: integer }
+                      completed: { type: integer }
+                      in_progress: { type: integer }
+                      delayed: { type: integer }
+                      avg_turnover_min: { type: integer }
+
+  /surgeries/{surgery_id}/hourly-update:
+    post:
+      summary: Send hourly update to attendant
+      description: Triggers SMS/WhatsApp to attendant with surgery status — used in Act 2
+      tags: [OR & Surgery Tracker]
+      parameters:
+        - name: surgery_id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message: { type: string }
+                stage: { type: string }
+                eta_minutes: { type: integer }
+      responses:
+        '200':
+          description: Update sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message_id: { type: string }
+                  timestamp: { type: string, format: date-time }
+
+  /voice-calls/sequence:
+    post:
+      summary: Trigger voice call sequence
+      description: Initiates Day 2/10/15/30 automated voice call — used in Act 3
+      tags: [Patient Journey Intelligence]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                patient_id: { type: integer }
+                call_day: { type: integer, enum: [2, 10, 15, 30] }
+                language: { type: string, enum: [en, hi, te], default: te }
+      responses:
+        '200':
+          description: Call queued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  call_id: { type: integer }
+                  status: { type: string }
+                  scheduled_at: { type: string, format: date-time }
+
+  /finance/waterfall:
+    get:
+      summary: Revenue waterfall
+      description: Returns monthly revenue breakdown by department — used in Act 4
+      tags: [Finance & Compliance]
+      parameters:
+        - name: month
+          in: query
+          schema: { type: string, format: date }
+        - name: branch_id
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Revenue waterfall
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  revenue_lines:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RevenueLine'
+                  deductions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DeductionLine'
+                  net_revenue:
+                    type: number
+                    format: decimal
+                  ebitda_margin_pct:
+                    type: number
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    BranchOverview:
+      type: object
+      properties:
+        branch_id: { type: integer }
+        branch_name: { type: string }
+        city: { type: string }
+        total_beds: { type: integer }
+        icu_beds: { type: integer }
+        admissions_today: { type: integer }
+        occupancy_pct: { type: number }
+        daily_revenue: { type: number, format: decimal }
+        status: { type: string, enum: [Optimal, 'On Track', Watch] }
+
+    Surgery:
+      type: object
+      properties:
+        surgery_id: { type: integer }
+        patient_name: { type: string }
+        attendant_name: { type: string }
+        attendant_phone: { type: string }
+        doctor_name: { type: string }
+        specialty: { type: string }
+        ot_number: { type: string }
+        procedure_name: { type: string }
+        scheduled_start: { type: string, format: date-time }
+        actual_start: { type: string, format: date-time }
+        actual_end: { type: string, format: date-time }
+        status: { type: string, enum: [Scheduled, 'In Progress', Completed, Delayed, Cancelled] }
+        delay_minutes: { type: integer }
+        hourly_updates_sent: { type: integer }
+        attendant_notified: { type: boolean }
+        alert_status: { type: string }
+
+    RevenueLine:
+      type: object
+      properties:
+        payment_type: { type: string }
+        gross_revenue: { type: number, format: decimal }
+        net_revenue: { type: number, format: decimal }
+        margin_pct: { type: number }
+
+    DeductionLine:
+      type: object
+      properties:
+        deduction_type: { type: string }
+        amount: { type: number, format: decimal }
+        pct_of_gross: { type: number }

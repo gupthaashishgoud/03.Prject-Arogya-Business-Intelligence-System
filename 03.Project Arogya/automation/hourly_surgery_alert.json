@@ -1,0 +1,166 @@
+{
+  "$schema": "https://n8n.io/schemas/workflow.json",
+  "name": "Project Arogya — Hourly Surgery Attendant Update",
+  "description": "Every 60 minutes during active surgery, sends SMS/WhatsApp update to attendant with patient status, procedure stage, and ETA.",
+  "version": 1,
+  "tags": ["healthcare", "surgery", "alerts", "patient-journey"],
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none"
+  },
+  "nodes": [
+    {
+      "id": "trigger-hourly",
+      "name": "Every 60 Min Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "expression": "0 * * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "query-active-surgeries",
+      "name": "Query Active Surgeries",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [200, 0],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT s.surgery_id, p.patient_name, p.attendant_name, p.attendant_phone, d.doctor_name, s.procedure_name, s.ot_number, s.actual_start, s.hourly_updates_sent, s.status FROM fact_surgeries s JOIN dim_patient p ON s.patient_id = p.patient_id JOIN dim_doctor d ON s.doctor_id = d.doctor_id WHERE s.status = 'In Progress' AND s.actual_start IS NOT NULL;",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "postgres-arogya",
+          "name": "Arogya DB"
+        }
+      }
+    },
+    {
+      "id": "build-message",
+      "name": "Build Update Message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [400, 0],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "message",
+              "value": "=Arogya Care Update for {{ $json.attendant_name }}: Patient {{ $json.patient_name }} ({{ $json.procedure_name }}) in {{ $json.ot_number }} is progressing well. Dr. {{ $json.doctor_name }} is performing the procedure. Next update in 60 minutes. Reply STATUS for on-demand update.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "send-sms",
+      "name": "Send SMS to Attendant",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [600, -100],
+      "parameters": {
+        "operation": "send",
+        "to": "={{ $json.attendant_phone }}",
+        "from": "+1234567890",
+        "message": "={{ $json.message }}",
+        "options": {}
+      },
+      "credentials": {
+        "twilioApi": {
+          "id": "twilio-arogya",
+          "name": "Arogya Twilio"
+        }
+      }
+    },
+    {
+      "id": "send-whatsapp",
+      "name": "Send WhatsApp to Attendant",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [600, 100],
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v18.0/PHONE_NUMBER_ID/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "messaging_product": "whatsapp",
+          "recipient_type": "individual",
+          "to": "={{ $json.attendant_phone }}",
+          "type": "text",
+          "text": {
+            "body": "={{ $json.message }}"
+          }
+        }
+      }
+    },
+    {
+      "id": "increment-counter",
+      "name": "Increment Update Count",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [800, 0],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE fact_surgeries SET hourly_updates_sent = hourly_updates_sent + 1 WHERE surgery_id = {{ $json.surgery_id }};",
+        "options": {}
+      }
+    },
+    {
+      "id": "log-activity",
+      "name": "Log to Activity DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1000, 0],
+      "parameters": {
+        "operation": "insert",
+        "table": "surgery_alert_log",
+        "columns": {
+          "mapping": [
+            { "column": "surgery_id", "value": "={{ $json.surgery_id }}" },
+            { "column": "alert_type", "value": "Hourly Update" },
+            { "column": "channel", "value": "SMS+WhatsApp" },
+            { "column": "sent_at", "value": "={{ $now }}" }
+          ]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 60 Min Trigger": {
+      "main": [[{ "node": "Query Active Surgeries", "type": "main", "index": 0 }]]
+    },
+    "Query Active Surgeries": {
+      "main": [[{ "node": "Build Update Message", "type": "main", "index": 0 }]]
+    },
+    "Build Update Message": {
+      "main": [
+        [{ "node": "Send SMS to Attendant", "type": "main", "index": 0 }],
+        [{ "node": "Send WhatsApp to Attendant", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send SMS to Attendant": {
+      "main": [[{ "node": "Increment Update Count", "type": "main", "index": 0 }]]
+    },
+    "Send WhatsApp to Attendant": {
+      "main": [[{ "node": "Increment Update Count", "type": "main", "index": 0 }]]
+    },
+    "Increment Update Count": {
+      "main": [[{ "node": "Log to Activity DB", "type": "main", "index": 0 }]]
+    }
+  }
+}

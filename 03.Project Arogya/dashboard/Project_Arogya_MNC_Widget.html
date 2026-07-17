@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Arogya — Healthcare Operations Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f0f4f8; color: #1a202c; }
+  #app { max-width: 1300px; margin: 0 auto; min-height: 100vh; }
+
+  /* ===== BLACK HEADER — MNC standard ===== */
+  .hero { background: #111111; color: white; padding: 40px 32px; }
+  .brand { display: flex; align-items: center; gap: 20px; }
+  .logo { width: 64px; height: 64px; background: white; color: #111111; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; font-weight: 800; }
+  .hero h1 { margin: 0; font-size: 1.9rem; font-weight: 700; letter-spacing: 0.5px; }
+  .hero-sub { margin: 4px 0 14px; font-size: 1rem; opacity: 0.85; font-weight: 400; }
+  .meta { display: flex; gap: 10px; flex-wrap: wrap; }
+  .badge { background: rgba(255,255,255,0.1); padding: 5px 14px; border-radius: 16px; font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.2); }
+
+  /* ===== TABS ===== */
+  .tabs { display: flex; gap: 0; background: white; border-bottom: 2px solid #e2e8f0; overflow-x: auto; }
+  .tab { flex: 1; min-width: 200px; padding: 16px 14px; border: none; background: white; cursor: pointer; text-align: left; transition: all 0.2s; border-bottom: 3px solid transparent; display: flex; flex-direction: column; gap: 3px; }
+  .tab:hover { background: #f7fafc; }
+  .tab.active { border-bottom-color: #111111; background: #f0f0f0; }
+  .tab-num { font-size: 1.3rem; font-weight: 700; color: #111111; }
+  .tab-label { font-size: 0.85rem; font-weight: 600; }
+  .tab-role { font-size: 0.7rem; color: #718096; }
+
+  .panel { display: none; padding: 24px; }
+  .panel.active { display: block; }
+  .h2 { margin: 0 0 5px; font-size: 1.3rem; }
+  .meta2 { color: #718096; font-size: 0.85rem; margin: 0 0 18px; }
+
+  /* ===== KPI CARDS — CENTERED with TOP ACCENT BAR ===== */
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+  .kpi { 
+    background: white; 
+    border-radius: 10px; 
+    padding: 20px 16px; 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06); 
+    border-top: 4px solid #e2e8f0;
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center; 
+    text-align: center;
+    min-height: 110px;
+  }
+  .kpi.g { border-top-color: #38a169; }
+  .kpi.a { border-top-color: #d69e2e; }
+  .kpi.r { border-top-color: #e53e3e; }
+  .kpi.b { border-top-color: #3182ce; }
+  .kpi.p { border-top-color: #805ad5; }
+  .kpi-l { font-size: 0.75rem; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+  .kpi-v { font-size: 1.5rem; font-weight: 700; color: #1a202c; margin-bottom: 5px; line-height: 1.2; }
+  .kpi-d { font-size: 0.75rem; color: #718096; text-align: center; }
+
+  .card { background: white; border-radius: 10px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 16px; }
+  .card h3 { margin: 0 0 12px; font-size: 0.95rem; color: #1a202c; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .three { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  th { text-align: left; padding: 8px 6px; border-bottom: 2px solid #e2e8f0; color: #718096; font-weight: 600; }
+  td { padding: 8px 6px; border-bottom: 1px solid #edf2f7; }
+  tr:hover td { background: #f7fafc; }
+  .pos { color: #38a169; font-weight: 600; }
+  .neg { color: #e53e3e; font-weight: 600; }
+  .pill { padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 600; display: inline-block; }
+  .pill.g { background: #c6f6d5; color: #22543d; }
+  .pill.a { background: #fefcbf; color: #744210; }
+  .pill.r { background: #fed7d7; color: #742a2a; }
+  .pill.b { background: #bee3f8; color: #2a4365; }
+  .pill.p { background: #e9d8fd; color: #553c9a; }
+  .pill.gr { background: #e2e8f0; color: #4a5568; }
+
+  /* ===== ALERT CARDS — TOP ACCENT BAR, CENTERED TEXT ===== */
+  .alert { 
+    display: flex; 
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 20px; 
+    border-radius: 10px; 
+    background: #f7fafc; 
+    margin-bottom: 10px;
+    border-top: 4px solid #e2e8f0;
+    gap: 8px;
+  }
+  .alert.h { border-top-color: #e53e3e; background: linear-gradient(180deg, rgba(229,62,62,0.06) 0%, #f7fafc 40%); }
+  .alert.m { border-top-color: #d69e2e; background: linear-gradient(180deg, rgba(214,158,46,0.06) 0%, #f7fafc 40%); }
+  .alert.l { border-top-color: #3182ce; background: linear-gradient(180deg, rgba(49,130,206,0.06) 0%, #f7fafc 40%); }
+  .alert-s { font-size: 0.7rem; font-weight: 700; min-width: 45px; text-align: center; }
+  .alert-b { flex: 1; text-align: center; }
+  .alert-b strong { display: block; margin-bottom: 6px; font-size: 0.9rem; line-height: 1.4; }
+  .alert-b p { margin: 0; font-size: 0.8rem; color: #718096; line-height: 1.5; }
+  .btn { padding: 6px 16px; border-radius: 5px; border: 1px solid #cbd5e0; background: white; cursor: pointer; font-size: 0.75rem; margin-top: 4px; }
+  .btn:hover { background: #edf2f7; }
+  .btn-p { padding: 6px 14px; border-radius: 5px; border: none; background: #111111; color: white; cursor: pointer; font-size: 0.75rem; font-weight: 600; }
+  .btn-p:hover { background: #333333; }
+  .btn-s { padding: 6px 14px; border-radius: 5px; border: none; background: #38a169; color: white; cursor: pointer; font-size: 0.75rem; font-weight: 600; }
+  .btn-s:hover { background: #2f855a; }
+
+  /* ===== BAR CHART — SOULFUL COLORS ===== */
+  .bar-chart { display: flex; flex-direction: column; gap: 12px; }
+  .bar-g { display: flex; align-items: center; gap: 10px; }
+  .bar-l { width: 100px; font-size: 0.8rem; font-weight: 600; }
+  .bar-t { flex: 1; height: 20px; background: #e2e8f0; border-radius: 10px; overflow: hidden; }
+  .bar-f { height: 100%; border-radius: 10px; }
+  /* Surgeon utilization bars */
+  .bar-f.surg { background: linear-gradient(90deg, #4A6741, #5A7D4F); }
+  /* Payroll bars */
+  .bar-f.pay { background: linear-gradient(90deg, #8B7355, #A68B6A); }
+  /* Default fallback */
+  .bar-f.def { background: linear-gradient(90deg, #4A5568, #718096); }
+  .bar-v { width: 100px; font-size: 0.75rem; color: #718096; }
+
+  /* ===== TIMELINE — TOP ACCENT BAR ===== */
+  .tl { display: flex; flex-direction: column; gap: 12px; }
+  .tl-i { 
+    display: flex; 
+    gap: 12px; 
+    align-items: flex-start; 
+    padding: 16px; 
+    border-radius: 10px; 
+    background: #f7fafc; 
+    border-top: 4px solid #3182ce; 
+  }
+  .tl-i.d { border-top-color: #38a169; background: linear-gradient(180deg, rgba(56,161,105,0.06) 0%, #f7fafc 40%); }
+  .tl-i.p { border-top-color: #d69e2e; background: linear-gradient(180deg, rgba(214,158,46,0.06) 0%, #f7fafc 40%); }
+  .tl-dot { font-size: 1.2rem; min-width: 30px; text-align: center; }
+  .tl-b { flex: 1; }
+  .tl-b strong { display: block; font-size: 0.9rem; }
+  .tl-b p { margin: 2px 0; font-size: 0.8rem; color: #718096; }
+  .tl-a { font-size: 0.75rem; color: #111111; font-weight: 600; cursor: pointer; }
+  .tl-a:hover { text-decoration: underline; }
+
+  /* ===== SURGERY CARDS ===== */
+  .surg { border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; margin-bottom: 10px; }
+  .surg-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .surg-t { font-weight: 700; font-size: 0.95rem; }
+  .surg-d { font-size: 0.85rem; color: #4a5568; }
+  .surg-d p { margin: 3px 0; }
+  .upd { margin-top: 10px; padding: 12px; background: #f7fafc; border-radius: 8px; font-size: 0.8rem; line-height: 1.5; }
+  .upd strong { color: #111111; }
+
+  .crm { border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; background: linear-gradient(135deg, #f0fff4, #e6fffa); }
+  .crm h4 { margin: 0 0 10px; font-size: 1rem; color: #22543d; }
+  .crm-f { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #c6f6d5; font-size: 0.85rem; }
+  .crm-f:last-child { border-bottom: none; }
+  .crm-i { font-size: 1.2rem; }
+  .crm-d { flex: 1; }
+  .crm-d strong { display: block; }
+  .crm-d span { font-size: 0.75rem; color: #718096; }
+
+  .voice { margin-top: 12px; padding: 16px; background: #fffaf0; border-radius: 10px; border: 1px solid #fbd38d; }
+  .voice h4 { margin: 0 0 12px; font-size: 0.95rem; color: #744210; }
+  .voice-r { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+  .voice-d { min-width: 70px; font-size: 0.8rem; font-weight: 700; color: #744210; }
+  .voice-s { flex: 1; font-size: 0.8rem; color: #4a5568; background: white; padding: 10px; border-radius: 6px; border-left: 3px solid #d69e2e; line-height: 1.5; }
+  .voice-st { font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; }
+
+  .team { border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; text-align: center; }
+  .team h4 { margin: 0 0 8px; font-size: 0.95rem; }
+  .team-c { font-size: 1.8rem; font-weight: 700; color: #111111; }
+  .team-l { font-size: 0.75rem; color: #718096; }
+
+  .prog-t { height: 20px; background: #e2e8f0; border-radius: 10px; overflow: hidden; margin-top: 6px; }
+  .prog-f { height: 100%; border-radius: 10px; }
+  .prog-l { font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; }
+  .prog-e { font-size: 0.8rem; color: #718096; margin-top: 6px; }
+
+  .wf { display: flex; flex-direction: column; gap: 6px; }
+  .wf-r { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; padding: 5px 0; }
+  .wf-r.t { font-weight: 700; border-top: 2px solid #1a202c; padding-top: 8px; }
+  .wf-vp { color: #38a169; }
+  .wf-vn { color: #e53e3e; }
+  .wf-vn2 { color: #1a202c; font-weight: 600; }
+  .wf-b { height: 6px; border-radius: 3px; }
+
+  .mb { padding: 16px; border-radius: 10px; text-align: center; }
+  .mb.g { background: #f0fff4; }
+  .mb.a { background: #fffff0; }
+  .mb.r { background: #fff5f5; }
+  .mb-v { font-size: 1.4rem; font-weight: 700; }
+  .mb-l { font-size: 0.75rem; color: #718096; }
+
+  .foot { text-align: center; padding: 28px; color: #718096; font-size: 0.8rem; border-top: 1px solid #e2e8f0; margin-top: 16px; }
+
+  @media (max-width: 900px) {
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .two { grid-template-columns: 1fr; }
+    .three { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 1.3rem; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+<header class="hero">
+  <div class="brand">
+    <div class="logo">AR</div>
+    <div>
+      <h1>PROJECT AROGYA</h1>
+      <p class="hero-sub">Patient Journey Intelligence & Healthcare Operations Dashboard</p>
+      <div class="meta">
+        <span class="badge">Rs.200Cr+ Annual Revenue</span>
+        <span class="badge">8 Branches</span>
+        <span class="badge">800+ Beds</span>
+        <span class="badge">300+ Doctors & Nurses</span>
+        <span class="badge">400+ Sales Executives</span>
+        <span class="badge">12 VP-Led Teams</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button class="tab active" data-tab="act1" onclick="switchTab('act1')">
+    <span class="tab-num">1</span>
+    <span class="tab-label">GM Command Center</span>
+    <span class="tab-role">General Manager</span>
+  </button>
+  <button class="tab" data-tab="act2" onclick="switchTab('act2')">
+    <span class="tab-num">2</span>
+    <span class="tab-label">OR & Surgery Tracker</span>
+    <span class="tab-role">OT Incharge</span>
+  </button>
+  <button class="tab" data-tab="act3" onclick="switchTab('act3')">
+    <span class="tab-num">3</span>
+    <span class="tab-label">Patient Journey Intelligence</span>
+    <span class="tab-role">VP Sales / Relations</span>
+  </button>
+  <button class="tab" data-tab="act4" onclick="switchTab('act4')">
+    <span class="tab-num">4</span>
+    <span class="tab-label">Finance & Compliance</span>
+    <span class="tab-role">CFO / Administrator</span>
+  </button>
+</nav>
+
+<!-- ACT 1 -->
+<section id="act1" class="panel active">
+  <h2 class="h2">Act 1 - GM Command Center</h2>
+  <p class="meta2">Real-time view across all 8 branches | 800+ beds | 300+ clinical staff | 400+ sales team</p>
+
+  <div class="kpi-row">
+    <div class="kpi b"><div class="kpi-l">Total Admissions (Today)</div><div class="kpi-v">1,247</div><div class="kpi-d">+8.3% vs yesterday</div></div>
+    <div class="kpi g"><div class="kpi-l">Bed Occupancy</div><div class="kpi-v">87.4%</div><div class="kpi-d">Target: 85% OK</div></div>
+    <div class="kpi a"><div class="kpi-l">Surgeries Scheduled</div><div class="kpi-v">42</div><div class="kpi-d">3 delayed, 1 cancelled</div></div>
+    <div class="kpi p"><div class="kpi-l">Sales Pipeline</div><div class="kpi-v">Rs.4.2Cr</div><div class="kpi-d">12 VP teams active</div></div>
+  </div>
+
+  <div class="two">
+    <div class="card">
+      <h3>Branch Performance Overview</h3>
+      <table>
+        <thead><tr><th>Branch</th><th>Beds</th><th>Occ</th><th>Adm</th><th>Revenue</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Begumpet (HQ)</strong></td><td>200</td><td>92%</td><td>184</td><td>Rs.28.5L</td><td><span class="pill g">Optimal</span></td></tr>
+          <tr><td><strong>Ameerpet</strong></td><td>150</td><td>89%</td><td>134</td><td>Rs.21.2L</td><td><span class="pill g">Optimal</span></td></tr>
+          <tr><td><strong>Kukatpally</strong></td><td>120</td><td>85%</td><td>102</td><td>Rs.16.8L</td><td><span class="pill g">On Track</span></td></tr>
+          <tr><td><strong>Secunderabad</strong></td><td>100</td><td>78%</td><td>78</td><td>Rs.12.4L</td><td><span class="pill a">Watch</span></td></tr>
+          <tr><td><strong>LB Nagar</strong></td><td>100</td><td>91%</td><td>91</td><td>Rs.14.5L</td><td><span class="pill g">Optimal</span></td></tr>
+          <tr><td><strong>Madhapur</strong></td><td>80</td><td>88%</td><td>70</td><td>Rs.11.2L</td><td><span class="pill g">On Track</span></td></tr>
+          <tr><td><strong>Nizamabad</strong></td><td>50</td><td>82%</td><td>41</td><td>Rs.6.5L</td><td><span class="pill g">On Track</span></td></tr>
+          <tr><td><strong>Warangal</strong></td><td>50</td><td>76%</td><td>38</td><td>Rs.5.8L</td><td><span class="pill a">Watch</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Critical Alerts - GM Action Queue</h3>
+      <div class="alert h">
+        <div class="alert-s">HIGH</div>
+        <div class="alert-b"><strong>Secunderabad - ICU Bed Shortage</strong><p>Only 2 ICU beds available. 3 critical cases in ER. Transfer to Begumpet HQ or activate overflow.</p></div>
+        <button class="btn" onclick="alert('Transfer protocol activated')">Activate</button>
+      </div>
+      <div class="alert h">
+        <div class="alert-s">HIGH</div>
+        <div class="alert-b"><strong>Warangal - Sales Underperforming</strong><p>VP Team 8 at 62% of monthly target. 12 executives below quota. HR intervention required.</p></div>
+        <button class="btn" onclick="alert('HR alert sent to VP Team 8')">Alert HR</button>
+      </div>
+      <div class="alert m">
+        <div class="alert-s">MED</div>
+        <div class="alert-b"><strong>Begumpet - OT 3 Delayed</strong><p>Laparoscopic surgery delayed 45 min due to anesthesia shift change. 2 downstream surgeries impacted.</p></div>
+        <button class="btn" onclick="alert('Anesthesia team notified')">Notify</button>
+      </div>
+      <div class="alert l">
+        <div class="alert-s">LOW</div>
+        <div class="alert-b"><strong>Pharma Stock - Kukatpally</strong><p>Antibiotic stock below reorder level. Auto-PO generated. Delivery ETA: 6 hours.</p></div>
+        <button class="btn" onclick="alert('PO confirmed with supplier')">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Organization Structure - 400+ Sales Executives</h3>
+    <div class="three">
+      <div class="team"><h4>VP Teams</h4><div class="team-c">12</div><div class="team-l">VP-led teams across 8 branches</div><div style="margin-top:8px;font-size:0.75rem;color:#718096;">Each VP manages 25-40 executives</div></div>
+      <div class="team"><h4>Sales Executives</h4><div class="team-c">400+</div><div class="team-l">Field + inbound + corporate</div><div style="margin-top:8px;font-size:0.75rem;color:#718096;">B2C patient acquisition + B2B tie-ups</div></div>
+      <div class="team"><h4>Monthly Target</h4><div class="team-c">Rs.16.7Cr</div><div class="team-l">Rs.200Cr annualized</div><div style="margin-top:8px;font-size:0.75rem;color:#718096;">Current run-rate: Rs.17.2Cr (103%)</div></div>
+    </div>
+    <div style="margin-top:16px;">
+      <h4 style="font-size:0.9rem;margin-bottom:10px;">VP Team Performance Leaderboard</h4>
+      <table>
+        <thead><tr><th>Team</th><th>VP Name</th><th>Branch</th><th>Execs</th><th>Target</th><th>Achieved</th><th>%</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Team 1</td><td>VP Ramesh</td><td>Begumpet</td><td>40</td><td>Rs.2.8Cr</td><td>Rs.3.1Cr</td><td class="pos">111%</td><td><span class="pill g">Top</span></td></tr>
+          <tr><td>Team 2</td><td>VP Suresh</td><td>Ameerpet</td><td>38</td><td>Rs.2.5Cr</td><td>Rs.2.7Cr</td><td class="pos">108%</td><td><span class="pill g">Top</span></td></tr>
+          <tr><td>Team 3</td><td>VP Priya</td><td>LB Nagar</td><td>35</td><td>Rs.2.2Cr</td><td>Rs.2.3Cr</td><td class="pos">105%</td><td><span class="pill g">On Track</span></td></tr>
+          <tr><td>Team 4</td><td>VP Karthik</td><td>Kukatpally</td><td>32</td><td>Rs.2.0Cr</td><td>Rs.1.9Cr</td><td class="neg">95%</td><td><span class="pill a">Watch</span></td></tr>
+          <tr><td>Team 5</td><td>VP Anjali</td><td>Madhapur</td><td>30</td><td>Rs.1.8Cr</td><td>Rs.1.7Cr</td><td class="neg">94%</td><td><span class="pill a">Watch</span></td></tr>
+          <tr><td>Team 6</td><td>VP Rajesh</td><td>Secunderabad</td><td>28</td><td>Rs.1.6Cr</td><td>Rs.1.4Cr</td><td class="neg">88%</td><td><span class="pill a">Watch</span></td></tr>
+          <tr><td>Team 7</td><td>VP Deepa</td><td>Nizamabad</td><td>25</td><td>Rs.1.2Cr</td><td>Rs.1.3Cr</td><td class="pos">108%</td><td><span class="pill g">On Track</span></td></tr>
+          <tr><td>Team 8</td><td>VP Arun</td><td>Warangal</td><td>22</td><td>Rs.1.0Cr</td><td>Rs.0.62Cr</td><td class="neg">62%</td><td><span class="pill r">Critical</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ACT 2 -->
+<section id="act2" class="panel">
+  <h2 class="h2">Act 2 - OR & Surgery Tracker with Hourly Attendant Updates</h2>
+  <p class="meta2">OT Incharge view | Live surgery status | Hourly updates to attendants | Real-time OR scheduling</p>
+
+  <div class="kpi-row">
+    <div class="kpi b"><div class="kpi-l">OTs Active</div><div class="kpi-v">6/8</div><div class="kpi-d">2 in turnover</div></div>
+    <div class="kpi g"><div class="kpi-l">Surgeries Today</div><div class="kpi-v">42</div><div class="kpi-d">28 completed, 14 scheduled</div></div>
+    <div class="kpi a"><div class="kpi-l">Avg Turnover Time</div><div class="kpi-v">28 min</div><div class="kpi-d">Target: 25 min (slight delay)</div></div>
+    <div class="kpi p"><div class="kpi-l">Hourly Updates Sent</div><div class="kpi-v">186</div><div class="kpi-d">Today via SMS/WhatsApp</div></div>
+  </div>
+
+  <div class="two">
+    <div class="card">
+      <h3>Live Surgery Status - Begumpet HQ</h3>
+      <div class="surg">
+        <div class="surg-h"><span class="surg-t">OT-1 - Cardiac Bypass (CABG)</span><span class="pill r">IN PROGRESS</span></div>
+        <div class="surg-d">
+          <p><strong>Patient:</strong> Mr. Venkatesh Rao (Age 64)</p>
+          <p><strong>Surgeon:</strong> Dr. Sharma (Cardiothoracic)</p>
+          <p><strong>Started:</strong> 09:15 AM | <strong>Est. End:</strong> 01:30 PM</p>
+          <p><strong>Attendant:</strong> Mrs. Rao (Wife) - Waiting Area B</p>
+        </div>
+        <div class="upd">
+          <strong>Hourly Update Log:</strong><br>
+          10:15 AM - "Patient stable. Bypass grafting in progress. No complications."<br>
+          11:15 AM - "2 of 3 grafts completed. Blood pressure normal. Next update at 12:15 PM."<br>
+          12:15 PM - "Final graft in progress. Surgeon expects closure by 1:00 PM."
+        </div>
+        <button class="btn-p" style="margin-top:8px;" onclick="alert('Hourly update sent to Mrs. Rao: Patient stable. Final graft in progress. Expected closure by 1:00 PM.')">Send Next Update</button>
+      </div>
+
+      <div class="surg">
+        <div class="surg-h"><span class="surg-t">OT-2 - Total Knee Replacement (TKR)</span><span class="pill g">COMPLETED</span></div>
+        <div class="surg-d">
+          <p><strong>Patient:</strong> Mrs. Lakshmi Devi (Age 58)</p>
+          <p><strong>Surgeon:</strong> Dr. Reddy (Orthopedics)</p>
+          <p><strong>Duration:</strong> 2h 15min | <strong>Closed:</strong> 11:45 AM</p>
+          <p><strong>Attendant:</strong> Mr. Devi (Husband) - Waiting Area A</p>
+        </div>
+        <div class="upd">
+          <strong>Hourly Update Log:</strong><br>
+          09:30 AM - "Surgery commenced. Patient under general anesthesia."<br>
+          10:30 AM - "Implant placement in progress. No complications. Vitals stable."<br>
+          11:45 AM - "Surgery completed successfully. Patient shifted to Recovery. Will update when awake."
+        </div>
+        <button class="btn-s" style="margin-top:8px;" onclick="alert('Final update sent to Mr. Devi: Surgery completed successfully. Patient shifted to Recovery Room. Will call when she is awake.')">Send Recovery Update</button>
+      </div>
+
+      <div class="surg">
+        <div class="surg-h"><span class="surg-t">OT-3 - Laparoscopic Cholecystectomy</span><span class="pill a">DELAYED</span></div>
+        <div class="surg-d">
+          <p><strong>Patient:</strong> Mr. Arjun Nair (Age 45)</p>
+          <p><strong>Surgeon:</strong> Dr. Patel (General Surgery)</p>
+          <p><strong>Scheduled:</strong> 10:00 AM | <strong>Expected Start:</strong> 11:30 AM</p>
+          <p><strong>Attendant:</strong> Mrs. Nair (Wife) - Cafeteria</p>
+        </div>
+        <div class="upd" style="background:#fffaf0;">
+          <strong>Hourly Update Log:</strong><br>
+          10:00 AM - "OT-3 delayed by 45 min due to anesthesia team shift change. Your surgery is next."<br>
+          11:00 AM - "Anesthesia team ready. Prepping OT-3 now. Expected start: 11:30 AM."
+        </div>
+        <button class="btn-p" style="margin-top:8px;" onclick="alert('Update sent to Mrs. Nair: OT-3 is now ready. Surgery will begin in 15 minutes. Please proceed to Waiting Area C.')">Send Status Update</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>OR Schedule - Today (Begumpet HQ)</h3>
+      <table>
+        <thead><tr><th>OT</th><th>Time</th><th>Procedure</th><th>Surgeon</th><th>Status</th><th>Attendant Notified</th></tr></thead>
+        <tbody>
+          <tr><td>OT-1</td><td>09:15</td><td>CABG</td><td>Dr. Sharma</td><td><span class="pill r">In Progress</span></td><td>OK Every hour</td></tr>
+          <tr><td>OT-2</td><td>09:30</td><td>TKR</td><td>Dr. Reddy</td><td><span class="pill g">Completed</span></td><td>OK Full log</td></tr>
+          <tr><td>OT-3</td><td>11:30</td><td>Lap Chole</td><td>Dr. Patel</td><td><span class="pill a">Delayed</span></td><td>OK Delay alert sent</td></tr>
+          <tr><td>OT-4</td><td>12:00</td><td>C-Section</td><td>Dr. Kaur</td><td><span class="pill b">Prepping</span></td><td>Pending First update</td></tr>
+          <tr><td>OT-5</td><td>14:00</td><td>Spinal Fusion</td><td>Dr. Iyer</td><td><span class="pill gr">Scheduled</span></td><td>-</td></tr>
+          <tr><td>OT-6</td><td>15:30</td><td>Hernia Repair</td><td>Dr. Patel</td><td><span class="pill gr">Scheduled</span></td><td>-</td></tr>
+          <tr><td>OT-7</td><td>-</td><td>-</td><td>-</td><td><span class="pill gr">Turnover</span></td><td>-</td></tr>
+          <tr><td>OT-8</td><td>-</td><td>-</td><td>-</td><td><span class="pill gr">Turnover</span></td><td>-</td></tr>
+        </tbody>
+      </table>
+      <div style="margin-top:16px;padding:12px;background:#e3f2fd;border-radius:8px;font-size:0.85rem;">
+        <strong>Automation Rule:</strong> Every surgery triggers an hourly SMS/WhatsApp update to the registered attendant. Updates include: patient status, procedure stage, any complications, and estimated completion time. Attendants can reply "STATUS" for an on-demand update.
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Surgeon Performance & Utilization</h3>
+    <div class="two">
+      <div>
+        <div class="bar-chart">
+          <div class="bar-g"><div class="bar-l">Dr. Sharma</div><div class="bar-t"><div class="bar-f" class="bar-f surg" style="width:92%"></div></div><div class="bar-v">92% util</div></div>
+          <div class="bar-g"><div class="bar-l">Dr. Reddy</div><div class="bar-t"><div class="bar-f" class="bar-f surg" style="width:88%"></div></div><div class="bar-v">88% util</div></div>
+          <div class="bar-g"><div class="bar-l">Dr. Patel</div><div class="bar-t"><div class="bar-f" class="bar-f surg" style="width:85%"></div></div><div class="bar-v">85% util</div></div>
+          <div class="bar-g"><div class="bar-l">Dr. Kaur</div><div class="bar-t"><div class="bar-f" class="bar-f surg" style="width:90%"></div></div><div class="bar-v">90% util</div></div>
+          <div class="bar-g"><div class="bar-l">Dr. Iyer</div><div class="bar-t"><div class="bar-f" class="bar-f surg" style="width:78%"></div></div><div class="bar-v">78% util</div></div>
+        </div>
+      </div>
+      <div>
+        <table>
+          <thead><tr><th>Metric</th><th>This Month</th><th>Target</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>First-case start on-time</td><td>82%</td><td>90%</td><td><span class="pill a">Below</span></td></tr>
+            <tr><td>Turnover time (avg)</td><td>28 min</td><td>25 min</td><td><span class="pill a">Slight</span></td></tr>
+            <tr><td>Same-day cancellation</td><td>3.2%</td><td>&lt;5%</td><td><span class="pill g">OK</span></td></tr>
+            <tr><td>Complication rate</td><td>1.8%</td><td>&lt;2%</td><td><span class="pill g">OK</span></td></tr>
+            <tr><td>Patient satisfaction (OT)</td><td>4.6/5</td><td>>4.5</td><td><span class="pill g">OK</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ACT 3 -->
+<section id="act3" class="panel">
+  <h2 class="h2">Act 3 - Patient Journey Intelligence & Post-Discharge Voice Simulation</h2>
+  <p class="meta2">VP Sales / Patient Relations view | 12 VP teams | 400+ executives | Automated post-discharge care continuum</p>
+
+  <div class="kpi-row">
+    <div class="kpi b"><div class="kpi-l">Active Patients</div><div class="kpi-v">1,247</div><div class="kpi-d">In-patient + day-care</div></div>
+    <div class="kpi g"><div class="kpi-l">Discharged (Today)</div><div class="kpi-v">89</div><div class="kpi-d">All entered voice call queue</div></div>
+    <div class="kpi p"><div class="kpi-l">Voice Calls Triggered</div><div class="kpi-v">356</div><div class="kpi-d">Day 2 / 10 / 15 / 30</div></div>
+    <div class="kpi a"><div class="kpi-l">Callback Requests</div><div class="kpi-v">23</div><div class="kpi-d">From voice call follow-ups</div></div>
+  </div>
+
+  <div class="two">
+    <div class="card">
+      <h3>Patient Journey Intelligence - Hourly Surgery Updates</h3>
+      <div class="crm">
+        <h4>Auto-Triggered Workflows</h4>
+        <div class="crm-f">
+          <span class="crm-i">1</span>
+          <div class="crm-d"><strong>Hourly SMS/WhatsApp to Attendant</strong><span>Every 60 min during surgery - status update with stage, vitals, ETA</span></div>
+        </div>
+        <div class="crm-f">
+          <span class="crm-i">2</span>
+          <div class="crm-d"><strong>On-Demand Status Query</strong><span>Attendant replies "STATUS" - instant automated response with live OT status</span></div>
+        </div>
+        <div class="crm-f">
+          <span class="crm-i">3</span>
+          <div class="crm-d"><strong>Delay Alert Auto-Push</strong><span>If surgery exceeds ETA by >30 min - auto-alert to attendant + reason</span></div>
+        </div>
+        <div class="crm-f">
+          <span class="crm-i">4</span>
+          <div class="crm-d"><strong>Completion Confirmation</strong><span>Surgeon closes - instant "Surgery completed" + recovery room ETA</span></div>
+        </div>
+      </div>
+      <div style="margin-top:12px;padding:12px;background:#fff5f5;border-radius:8px;border-left:3px solid #e53e3e;">
+        <strong style="font-size:0.85rem;">Why Patient Journey Intelligence Matters:</strong>
+        <p style="font-size:0.8rem;color:#4a5568;margin-top:4px;">Surgery waiting is the most stressful time for families. Hourly updates reduce anxiety, reduce front-desk queries by 70%, and build trust. When attendants feel informed, they become advocates - referring friends and family. This is not just automation; it is intelligence that transforms anxiety into advocacy.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Post-Discharge Voice Call Simulation</h3>
+      <div class="voice">
+        <h4>Automated Voice Call Sequence</h4>
+        <div class="voice-r">
+          <div class="voice-d">Day 2</div>
+          <div class="voice-s"><em>"Namaste, this is Arogya Care calling for Mr. Venkatesh Rao. How are you feeling today? Please rate your pain from 1 to 10. Are you taking medicines on time? Press 1 for Yes, 2 for No."</em></div>
+          <span class="voice-st pill g">Active</span>
+        </div>
+        <div class="voice-r">
+          <div class="voice-d">Day 10</div>
+          <div class="voice-s"><em>"Good morning, Arogya Care here. Checking on your recovery. Is the wound healing well? Any fever or swelling? Your follow-up is scheduled for Day 14. Press 1 to confirm, 2 to reschedule."</em></div>
+          <span class="voice-st pill g">Active</span>
+        </div>
+        <div class="voice-r">
+          <div class="voice-d">Day 15</div>
+          <div class="voice-s"><em>"Hello from Arogya. Your follow-up appointment is tomorrow at 10:00 AM with Dr. Sharma. Please bring your discharge summary and current medications. Press 1 to confirm attendance."</em></div>
+          <span class="voice-st pill g">Active</span>
+        </div>
+        <div class="voice-r">
+          <div class="voice-d">Day 30</div>
+          <div class="voice-s"><em>"Namaste, one month since your discharge. We hope you are fully recovered. Please rate your overall experience from 1 to 5. Would you recommend Arogya to your family? Press 1 for Yes, 2 for Maybe, 3 for No."</em></div>
+          <span class="voice-st pill g">Active</span>
+        </div>
+      </div>
+      <div style="margin-top:12px;padding:12px;background:#e3f2fd;border-radius:8px;font-size:0.85rem;">
+        <strong>Voice Call Analytics (This Month):</strong><br>
+        Calls placed: 3,240 | Answered: 2,891 (89%) | Avg duration: 2m 14s | Callback requests: 156 | NPS score: 72
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Patient Journey Timeline - Mrs. Lakshmi Devi (TKR Patient)</h3>
+    <div class="tl">
+      <div class="tl-i d">
+        <div class="tl-dot">OK</div>
+        <div class="tl-b"><strong>Admission - 12 July 2026</strong><p>Admitted for Total Knee Replacement. Pre-op workup completed. Attendant: Mr. Devi (Husband).</p></div>
+      </div>
+      <div class="tl-i d">
+        <div class="tl-dot">OK</div>
+        <div class="tl-b"><strong>Surgery - 13 July 2026, 09:30 AM</strong><p>OT-2, Dr. Reddy. 3 hourly updates sent to Mr. Devi. Surgery completed 11:45 AM. Shifted to Recovery.</p></div>
+      </div>
+      <div class="tl-i d">
+        <div class="tl-dot">OK</div>
+        <div class="tl-b"><strong>Discharge - 15 July 2026</strong><p>Discharged with 30-day medication plan. Physiotherapy schedule shared. Voice call sequence activated.</p></div>
+      </div>
+      <div class="tl-i d">
+        <div class="tl-dot">OK</div>
+        <div class="tl-b"><strong>Day 2 Voice Call - 17 July 2026</strong><p>Patient reported pain level 3/10. Taking medicines on time. No complications. Logged in CRM.</p><span class="tl-a" onclick="alert('Call transcript: Patient doing well. Pain 3/10. Medicines on time. No fever. Advised to continue physio.')">View Transcript</span></div>
+      </div>
+      <div class="tl-i p">
+        <div class="tl-dot">P</div>
+        <div class="tl-b"><strong>Day 10 Voice Call - 25 July 2026</strong><p>Scheduled for 10:00 AM. Script: Wound healing check, fever/swelling screening, follow-up confirmation.</p><span class="tl-a" onclick="alert('Call scheduled. Auto-dialer will trigger at 10:00 AM. If no answer, retry at 2:00 PM and 6:00 PM.')">Preview Script</span></div>
+      </div>
+      <div class="tl-i p">
+        <div class="tl-dot">P</div>
+        <div class="tl-b"><strong>Day 15 Follow-up - 30 July 2026</strong><p>Appointment scheduled with Dr. Reddy. Voice call reminder will trigger Day 14 evening.</p></div>
+      </div>
+      <div class="tl-i p">
+        <div class="tl-dot">P</div>
+        <div class="tl-b"><strong>Day 30 NPS Survey - 14 Aug 2026</strong><p>Final voice call for experience rating and referral intent. Feeds into VP team incentive calculation.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Sales Team Roster - VP Team 1 (Begumpet)</h3>
+    <table>
+      <thead><tr><th>Executive</th><th>Role</th><th>Patients (MTD)</th><th>Revenue</th><th>Target</th><th>Achievement</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Rajesh Kumar</strong></td><td>Sr. Executive</td><td>24</td><td>Rs.8.4L</td><td>Rs.7.5L</td><td class="pos">112%</td><td><span class="pill g">Top</span></td></tr>
+        <tr><td><strong>Priya Sharma</strong></td><td>Executive</td><td>19</td><td>Rs.6.8L</td><td>Rs.6.0L</td><td class="pos">113%</td><td><span class="pill g">Top</span></td></tr>
+        <tr><td><strong>Vikram Reddy</strong></td><td>Executive</td><td>16</td><td>Rs.5.2L</td><td>Rs.5.5L</td><td class="neg">95%</td><td><span class="pill a">Watch</span></td></tr>
+        <tr><td><strong>Anita Gupta</strong></td><td>Executive</td><td>14</td><td>Rs.4.8L</td><td>Rs.5.0L</td><td class="neg">96%</td><td><span class="pill a">Watch</span></td></tr>
+        <tr><td><strong>Suresh Nair</strong></td><td>Jr. Executive</td><td>11</td><td>Rs.3.6L</td><td>Rs.4.0L</td><td class="neg">90%</td><td><span class="pill a">Watch</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ACT 4 -->
+<section id="act4" class="panel">
+  <h2 class="h2">Act 4 - Finance & Compliance</h2>
+  <p class="meta2">CFO / Hospital Administrator view | Revenue waterfall | GST | Payroll | Insurance claims</p>
+
+  <div class="kpi-row">
+    <div class="kpi g"><div class="kpi-l">Monthly Revenue</div><div class="kpi-v">Rs.17.2Cr</div><div class="kpi-d">+3.0% vs target (Rs.16.7Cr)</div></div>
+    <div class="kpi g"><div class="kpi-l">EBITDA Margin</div><div class="kpi-v">18.5%</div><div class="kpi-d">Target: >17% OK</div></div>
+    <div class="kpi a"><div class="kpi-l">Insurance Claims Pending</div><div class="kpi-v">Rs.2.8Cr</div><div class="kpi-d">142 claims, avg 12 days</div></div>
+    <div class="kpi b"><div class="kpi-l">Payroll (Monthly)</div><div class="kpi-v">Rs.4.1Cr</div><div class="kpi-d">700+ staff across 8 branches</div></div>
+  </div>
+
+  <div class="two">
+    <div class="card">
+      <h3>Revenue Waterfall - July 2026</h3>
+      <div class="wf">
+        <div class="wf-r"><span>IPD Revenue</span><span class="wf-vp">+Rs.9.8Cr</span></div>
+        <div class="wf-b" style="height:120px;background:#38a169;border-radius:3px;"></div>
+        <div class="wf-r"><span>OPD Revenue</span><span class="wf-vp">+Rs.4.2Cr</span></div>
+        <div class="wf-b" style="height:52px;background:#38a169;border-radius:3px;"></div>
+        <div class="wf-r"><span>Surgery & Procedures</span><span class="wf-vp">+Rs.2.6Cr</span></div>
+        <div class="wf-b" style="height:32px;background:#38a169;border-radius:3px;"></div>
+        <div class="wf-r"><span>Pharmacy & Diagnostics</span><span class="wf-vp">+Rs.1.4Cr</span></div>
+        <div class="wf-b" style="height:17px;background:#38a169;border-radius:3px;"></div>
+        <div class="wf-r"><span>Corporate Tie-ups</span><span class="wf-vp">+Rs.0.8Cr</span></div>
+        <div class="wf-b" style="height:10px;background:#38a169;border-radius:3px;"></div>
+        <div class="wf-r"><span>Total Gross Revenue</span><span class="wf-vn2">Rs.18.8Cr</span></div>
+        <div class="wf-b" style="height:18px;background:#1565c0;border-radius:3px;"></div>
+        <div class="wf-r"><span>Discounts & Concessions</span><span class="wf-vn">-Rs.0.9Cr</span></div>
+        <div class="wf-b" style="height:11px;background:#e53e3e;border-radius:3px;"></div>
+        <div class="wf-r"><span>Insurance TPA Deductions</span><span class="wf-vn">-Rs.0.7Cr</span></div>
+        <div class="wf-b" style="height:8px;background:#e53e3e;border-radius:3px;"></div>
+        <div class="wf-r t"><span>Net Revenue</span><span class="wf-vn2">Rs.17.2Cr</span></div>
+        <div class="wf-b" style="height:16px;background:linear-gradient(90deg,#1565c0,#42a5f5);border-radius:3px;"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Department-wise Revenue & Cost</h3>
+      <table>
+        <thead><tr><th>Department</th><th>Revenue</th><th>Cost</th><th>Margin</th><th>Beds</th><th>Utilization</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Cardiology</strong></td><td>Rs.3.8Cr</td><td>Rs.2.4Cr</td><td class="pos">36.8%</td><td>45</td><td>94%</td></tr>
+          <tr><td><strong>Orthopedics</strong></td><td>Rs.3.2Cr</td><td>Rs.2.1Cr</td><td class="pos">34.4%</td><td>60</td><td>89%</td></tr>
+          <tr><td><strong>General Surgery</strong></td><td>Rs.2.6Cr</td><td>Rs.1.7Cr</td><td class="pos">34.6%</td><td>50</td><td>86%</td></tr>
+          <tr><td><strong>Obstetrics</strong></td><td>Rs.2.1Cr</td><td>Rs.1.4Cr</td><td class="pos">33.3%</td><td>40</td><td>91%</td></tr>
+          <tr><td><strong>Neurology</strong></td><td>Rs.1.8Cr</td><td>Rs.1.3Cr</td><td class="pos">27.8%</td><td>30</td><td>82%</td></tr>
+          <tr><td><strong>Oncology</strong></td><td>Rs.1.5Cr</td><td>Rs.1.1Cr</td><td class="pos">26.7%</td><td>25</td><td>78%</td></tr>
+          <tr><td><strong>Diagnostics</strong></td><td>Rs.1.4Cr</td><td>Rs.0.7Cr</td><td class="pos">50.0%</td><td>-</td><td>-</td></tr>
+          <tr><td><strong>Pharmacy</strong></td><td>Rs.1.4Cr</td><td>Rs.1.0Cr</td><td class="pos">28.6%</td><td>-</td><td>-</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="two">
+    <div class="card">
+      <h3>Payroll & Staffing Cost</h3>
+      <div class="bar-chart">
+        <div class="bar-g"><div class="bar-l">Doctors</div><div class="bar-t"><div class="bar-f" class="bar-f pay" style="width:45%"></div></div><div class="bar-v">Rs.1.85Cr (45%)</div></div>
+        <div class="bar-g"><div class="bar-l">Nurses</div><div class="bar-t"><div class="bar-f" class="bar-f pay" style="width:28%"></div></div><div class="bar-v">Rs.1.15Cr (28%)</div></div>
+        <div class="bar-g"><div class="bar-l">Sales Team</div><div class="bar-t"><div class="bar-f" class="bar-f pay" style="width:15%"></div></div><div class="bar-v">Rs.0.62Cr (15%)</div></div>
+        <div class="bar-g"><div class="bar-l">Admin/HR/Cleaning</div><div class="bar-t"><div class="bar-f" class="bar-f pay" style="width:12%"></div></div><div class="bar-v">Rs.0.48Cr (12%)</div></div>
+      </div>
+      <div style="margin-top:12px;padding:10px;background:#f0fff4;border-radius:8px;font-size:0.85rem;">
+        <strong>Total Monthly Payroll:</strong> Rs.4.1Cr | <strong>Staff Count:</strong> 700+ | <strong>Avg Cost/Employee:</strong> Rs.58,571
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Insurance Claims Tracker</h3>
+      <table>
+        <thead><tr><th>TPA</th><th>Claims Submitted</th><th>Approved</th><th>Pending</th><th>Rejected</th><th>Avg TAT</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Star Health</strong></td><td>48</td><td>Rs.1.2Cr</td><td>Rs.0.4Cr</td><td>Rs.0.1Cr</td><td>10 days</td></tr>
+          <tr><td><strong>ICICI Lombard</strong></td><td>35</td><td>Rs.0.8Cr</td><td>Rs.0.3Cr</td><td>Rs.0.05Cr</td><td>12 days</td></tr>
+          <tr><td><strong>Apollo Munich</strong></td><td>28</td><td>Rs.0.6Cr</td><td>Rs.0.2Cr</td><td>Rs.0.03Cr</td><td>14 days</td></tr>
+          <tr><td><strong>Max Bupa</strong></td><td>22</td><td>Rs.0.5Cr</td><td>Rs.0.15Cr</td><td>Rs.0.02Cr</td><td>11 days</td></tr>
+          <tr><td><strong>Others</strong></td><td>9</td><td>Rs.0.2Cr</td><td>Rs.0.1Cr</td><td>Rs.0.01Cr</td><td>15 days</td></tr>
+        </tbody>
+      </table>
+      <div style="margin-top:12px;padding:10px;background:#e3f2fd;border-radius:8px;font-size:0.85rem;">
+        <strong>Total Pending:</strong> Rs.2.8Cr | <strong>Approval Rate:</strong> 87% | <strong>Target TAT:</strong> &lt;10 days
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Compliance & Regulatory Dashboard</h3>
+    <div class="three">
+      <div class="mb g"><div class="mb-v">100%</div><div class="mb-l">NABH Compliance</div><div style="font-size:0.75rem;color:#718096;margin-top:4px;">All 8 branches accredited</div></div>
+      <div class="mb g"><div class="mb-v">100%</div><div class="mb-l">GST Filing</div><div style="font-size:0.75rem;color:#718096;margin-top:4px;">Monthly returns on time</div></div>
+      <div class="mb a"><div class="mb-v">98%</div><div class="mb-l">Bio-Medical Waste</div><div style="font-size:0.75rem;color:#718096;margin-top:4px;">2 minor violations flagged</div></div>
+      <div class="mb g"><div class="mb-v">100%</div><div class="mb-l">Fire Safety Audit</div><div style="font-size:0.75rem;color:#718096;margin-top:4px;">All branches cleared</div></div>
+      <div class="mb g"><div class="mb-v">100%</div><div class="mb-l">Drug License</div><div style="font-size:0.75rem;color:#718096;margin-top:4px;">All pharmacies valid</div></div>
+      <div class="mb a"><div class="mb-v">95%</div><div class="mb-l">Staff Certifications</div><div style="font-size:0.75rem;color:#718096;margin-top:4px;">15 nurses need renewal</div></div>
+    </div>
+  </div>
+</section>
+
+<footer class="foot">
+  <p><strong>Project Arogya</strong> — Patient Journey Intelligence Platform | Rs.200Cr+ Annual Revenue | 8 Branches | 800+ Beds | 300+ Clinical Staff | 400+ Sales Executives</p>
+  <p style="font-size:0.7rem;margin-top:5px;">Built by Guptha Ashish Goud | Based on real hospital operations model | Self-contained HTML — no server needed</p>
+</footer>
+</div>
+
+<script>
+function switchTab(tabId) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+  document.querySelector('[data-tab="' + tabId + '"]').classList.add('active');
+}
+</script>
+</body>
+</html>

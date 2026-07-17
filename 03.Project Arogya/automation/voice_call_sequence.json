@@ -1,0 +1,144 @@
+{
+  "$schema": "https://n8n.io/schemas/workflow.json",
+  "name": "Project Arogya — Post-Discharge Voice Call Sequence",
+  "description": "Automated voice calls on Day 2, 10, 15, and 30 post-discharge. Uses Twilio with IVR for pain score, medication adherence, follow-up confirmation, and NPS.",
+  "version": 1,
+  "tags": ["healthcare", "voice", "patient-journey", "nps"],
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none"
+  },
+  "nodes": [
+    {
+      "id": "trigger-daily",
+      "name": "Daily 10AM Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "expression": "0 10 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "query-due-calls",
+      "name": "Query Due Voice Calls",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [200, 0],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT p.patient_id, p.patient_name, p.contact_phone, p.attendant_name, p.attendant_phone, a.discharge_date, CURRENT_DATE - a.discharge_date AS days_since_discharge FROM dim_patient p JOIN fact_admissions a ON p.patient_id = a.patient_id WHERE a.status = 'Discharged' AND CURRENT_DATE - a.discharge_date IN (2, 10, 15, 30) AND NOT EXISTS (SELECT 1 FROM fact_voice_calls vc WHERE vc.patient_id = p.patient_id AND vc.call_day = CURRENT_DATE - a.discharge_date AND vc.call_date = CURRENT_DATE);",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "postgres-arogya",
+          "name": "Arogya DB"
+        }
+      }
+    },
+    {
+      "id": "build-twiml",
+      "name": "Build TwiML Script",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [400, 0],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "twiml",
+              "value": "=<Response><Say voice='Polly.Aditi'>Namaste, this is Arogya Care calling for {{ $json.patient_name }}. How are you feeling today? Please rate your pain from 1 to 10. Are you taking medicines on time? Press 1 for Yes, 2 for No.</Say><Gather action='https://api.arogyahospitals.com/v1/voice-calls/gather' method='POST' numDigits='1'><Say>Press 1 for Yes, 2 for No.</Say></Gather></Response>",
+              "type": "string"
+            },
+            {
+              "name": "call_day",
+              "value": "={{ $json.days_since_discharge }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "place-call",
+      "name": "Place Twilio Voice Call",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [600, 0],
+      "parameters": {
+        "operation": "makeCall",
+        "to": "={{ $json.contact_phone }}",
+        "from": "+1234567890",
+        "twiml": "={{ $json.twiml }}",
+        "options": {}
+      },
+      "credentials": {
+        "twilioApi": {
+          "id": "twilio-arogya",
+          "name": "Arogya Twilio"
+        }
+      }
+    },
+    {
+      "id": "log-call",
+      "name": "Log Voice Call",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [800, 0],
+      "parameters": {
+        "operation": "insert",
+        "table": "fact_voice_calls",
+        "columns": {
+          "mapping": [
+            { "column": "patient_id", "value": "={{ $json.patient_id }}" },
+            { "column": "call_day", "value": "={{ $json.call_day }}" },
+            { "column": "call_date", "value": "={{ $today }}" },
+            { "column": "call_time", "value": "={{ $now.format('HH:mm:ss') }}" },
+            { "column": "answered", "value": "false" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "notify-vp",
+      "name": "Notify VP Sales",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1000, 0],
+      "parameters": {
+        "fromEmail": "alerts@arogyahospitals.com",
+        "toEmail": "vp.sales@arogyahospitals.com",
+        "subject": "Voice Call Sequence Triggered — {{ $json.call_day }} Day Follow-ups",
+        "text": "{{ $json.call_day }} day voice calls have been triggered for discharged patients. Total calls placed: {{ $json.length }}. Check dashboard for callback requests.",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Daily 10AM Trigger": {
+      "main": [[{ "node": "Query Due Voice Calls", "type": "main", "index": 0 }]]
+    },
+    "Query Due Voice Calls": {
+      "main": [[{ "node": "Build TwiML Script", "type": "main", "index": 0 }]]
+    },
+    "Build TwiML Script": {
+      "main": [[{ "node": "Place Twilio Voice Call", "type": "main", "index": 0 }]]
+    },
+    "Place Twilio Voice Call": {
+      "main": [[{ "node": "Log Voice Call", "type": "main", "index": 0 }]]
+    },
+    "Log Voice Call": {
+      "main": [[{ "node": "Notify VP Sales", "type": "main", "index": 0 }]]
+    }
+  }
+}
